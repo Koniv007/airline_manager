@@ -1,12 +1,15 @@
+import { useState } from "react";
 import type { User } from "../../auth/authService.ts";
 import { CAREER_STARTING_CASH, type WorldMode } from "../../worlds/worldRules.ts";
 import { formatMoney } from "../../economy/money.ts";
 import Backdrop from "../Backdrop.tsx";
+import { resetAllGameData } from "../../persistence/resetGame.ts";
 
 interface Props {
   user: User;
   onSelect: (mode: WorldMode) => void;
   onSignOut: () => void;
+  onReset?: () => void;
 }
 
 function CareerArt() {
@@ -39,7 +42,16 @@ function SandboxArt() {
   );
 }
 
-export default function WorldSelectScreen({ user, onSelect, onSignOut }: Props) {
+export default function WorldSelectScreen({ user, onSelect, onSignOut, onReset }: Props) {
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
+
+  const handleConfirmReset = () => {
+    resetAllGameData();
+    setShowResetConfirm(false);
+    if (onReset) onReset();
+    else onSignOut();
+  };
+
   return (
     <div className="screen">
       <Backdrop />
@@ -49,7 +61,18 @@ export default function WorldSelectScreen({ user, onSelect, onSignOut }: Props) 
             <h1>Welcome, {user.displayName}</h1>
             <p className="tagline">Choose your world</p>
           </div>
-          <button className="secondary" onClick={onSignOut}>{user.isGuest ? "Exit guest mode" : "Log out"}</button>
+          <div style={{ display: "flex", gap: "8px" }}>
+            <button
+              className="secondary danger-btn"
+              onClick={() => setShowResetConfirm(true)}
+              title="Reset all game worlds and local saves"
+            >
+              ↺ Reset Game
+            </button>
+            <button className="secondary" onClick={onSignOut}>
+              {user.isGuest ? "Exit guest mode" : "Log out"}
+            </button>
+          </div>
         </div>
         {user.isGuest && (
           <div className="banner">Playing as a guest: your progress is saved only on this device. Create an account to play from anywhere.</div>
@@ -79,6 +102,45 @@ export default function WorldSelectScreen({ user, onSelect, onSignOut }: Props) 
           </button>
         </div>
       </div>
+
+      {showResetConfirm && (
+        <div className="modal-backdrop" onClick={() => setShowResetConfirm(false)}>
+          <div className="panel modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>Reset Entire Game</h2>
+              <button
+                type="button"
+                className="close-btn"
+                onClick={() => setShowResetConfirm(false)}
+              >
+                ✕
+              </button>
+            </div>
+            <p className="confirm-text">
+              Are you sure you want to <b>reset all game data</b>?
+              <br />
+              This will wipe all active worlds, saved airlines, and local storage data,
+              returning the simulation to a clean, fresh state.
+            </p>
+            <div className="modal-actions">
+              <button
+                type="button"
+                className="secondary"
+                onClick={() => setShowResetConfirm(false)}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="primary danger-btn"
+                onClick={handleConfirmReset}
+              >
+                Confirm & Reset All
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -1,0 +1,7 @@
+{
+  "name": "Airline Manager 1975–2040",
+  "description": "Airline management simulation game spanning 1975 to 2040.",
+  "capabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

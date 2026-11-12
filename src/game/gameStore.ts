@@ -7,6 +7,15 @@ import { worldKey, type GameServer } from "../worlds/serverList.ts";
 import { appStorage } from "../persistence/storage.ts";
 import { loadSave, registerMember, writeSave, type SavedAirline } from "../persistence/saveGame.ts";
 
+import type { PlayerAircraft } from "../fleet/types.ts";
+import {
+  buyAircraftAction,
+  leaseAircraftAction,
+  sellAircraftAction,
+  returnLeasedAircraftAction,
+  type TransactionResult,
+} from "../fleet/fleetService.ts";
+
 export interface Player {
   readonly id: string;
   readonly displayName: string;
@@ -24,6 +33,7 @@ export interface GameState {
   readonly serverName: string;
   readonly worldStartMs: number; // real time when this world was created (from the server)
   readonly clock: GameClock;
+  readonly fleet: readonly PlayerAircraft[];
 }
 
 export function createWorldState(
@@ -44,6 +54,7 @@ export function createWorldState(
     serverName: server.name,
     worldStartMs: server.worldStartMs,
     clock: clockAt(server.worldStartMs, nowMs),
+    fleet: [],
   };
 }
 
@@ -78,6 +89,55 @@ export function tick(): void {
   if (clock.epochDay !== state.clock.epochDay) setState({ ...state, clock });
 }
 
+import type { BuyAircraftOptions } from "../fleet/fleetService.ts";
+
+export function buyAircraft(
+  modelId: string,
+  options?: BuyAircraftOptions,
+): TransactionResult {
+  const result = buyAircraftAction(state, modelId, options);
+  if (result.success && result.newState) {
+    setState(result.newState);
+  }
+  return result;
+}
+
+export function leaseAircraft(
+  modelId: string,
+  options?: { customRegistration?: string; nickname?: string },
+): TransactionResult {
+  const result = leaseAircraftAction(state, modelId, options);
+  if (result.success && result.newState) {
+    setState(result.newState);
+  }
+  return result;
+}
+
+export function sellAircraft(aircraftId: string): TransactionResult {
+  const result = sellAircraftAction(state, aircraftId);
+  if (result.success && result.newState) {
+    setState(result.newState);
+  }
+  return result;
+}
+
+export function returnLeasedAircraft(aircraftId: string): TransactionResult {
+  const result = returnLeasedAircraftAction(state, aircraftId);
+  if (result.success && result.newState) {
+    setState(result.newState);
+  }
+  return result;
+}
+
+export function leaveWorld(): void {
+  const idle = createWorldState(
+    { id: "idle", name: "–", mode: "career", season: 1, players: 0, capacity: 250, worldStartMs: Date.now() },
+    { id: "", displayName: "Player", isGuest: true },
+    Date.now(),
+  );
+  setState(idle);
+}
+
 export function useGameState(): GameState {
   return useSyncExternalStore(
     (listener) => {
@@ -87,3 +147,5 @@ export function useGameState(): GameState {
     () => state,
   );
 }
+
+
